@@ -1,0 +1,74 @@
+
+{# makros #}
+{# Tips: https://www.webstoemp.com/blog/craft-multilingual-websites-tips/ #}
+
+{# date macro #}
+{% macro defaultDate(fieldParam) %}
+	{% if craft.config.currentLgg[craft.locale] == 'en' %}
+    {{ fieldParam | date('F m, Y') }}
+  {% else %}
+    {{ fieldParam | date('j. F Y') }}
+  {% endif %}
+{% endmacro %}
+
+{# lazysizes macro #}
+{#
+  https://nystudio107.com/blog/creating-optimized-images-in-craft-cms
+  https://afarkas.github.io/lazysizes/
+#}
+{% macro lazyPanel(fieldParam, classParam) %}
+	{% set sizeThumb = { mode: 'fit', width: 100, quality: 60 } %}
+	{% set sizeONEx = { mode: 'fit', width: 300, quality: 75 } %}
+	{% set sizeTWOx = { mode: 'fit', width: 600, quality: 75 } %}
+
+	{% for asset in fieldParam %}
+		<img alt="{{ fieldParam.title }}"
+		     data-src="{{ asset.url(sizeThumb) }}"
+		     data-srcset="{{ asset.url(sizeONEx) }} 1x, {{ asset.url(sizeTWOx) }} 2x"
+		     class="lazyload {{ classParam }}">
+	{% endfor %}
+{% endmacro %}
+
+{# config.php #}
+
+return array(
+    '*' => array(
+        'defaultWeekStartDay' => 1,
+        'enableCsrfProtection' => true,
+        'omitScriptNameInUrls' => 'auto',
+        'cpTrigger' => 'diniMueter',
+        'limitAutoSlugsToAscii' => true,
+        'defaultImageQuality' => 80,
+        'currentLgg' => array(
+                'de_ch' => 'de',
+                'en'    => 'en',
+            ),
+    ),
+    //local KA
+    'expedweather.local' => array(
+        'environment' => 'local',
+        'cache' => false,
+        'enableTemplateCaching' => false,
+        'devMode' => true,
+        'siteUrl' => 'http://domain.local/',
+        'environmentVariables' => array(
+            'basePath' => '/path/',
+            'baseUrl'  => 'http://domain.local/',
+        )
+    ),
+);
+
+{# _layout.twig #}
+{% set expiry = now | date_modify('+1 hour') %}
+
+{% if craft.config.environment == 'live' %}
+  {% header "Cache-Control: max-age=" ~ (expiry.timestamp - now.timestamp) %}
+  {% header "Pragma: cache" %}
+  {% header "Expires: " ~ expiry | date('D, d M Y H:i:s', 'GMT') ~ " GMT" %}
+{% endif %}
+{% import '_doc/docMacro' as macro %}
+
+{% cache until expiry %}
+  {% minify %}{% block content %}{# all content #}{% endblock %}{% endminify %}
+{% endcache %}
+
